@@ -1,0 +1,320 @@
+<html>
+<head>
+<title>convex_hull.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cc7832;}
+.s1 { color: #a9b7c6;}
+.s2 { color: #6a8759;}
+.s3 { color: #808080;}
+.s4 { color: #6897bb;}
+</style>
+</head>
+<body bgcolor="#2b2b2b">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+convex_hull.py</font>
+</center></td></tr></table>
+<pre><span class="s0">from </span><span class="s1">which_pyqt </span><span class="s0">import </span><span class="s1">PYQT_VER</span>
+
+<span class="s0">if </span><span class="s1">PYQT_VER == </span><span class="s2">'PYQT5'</span><span class="s1">:</span>
+    <span class="s0">from </span><span class="s1">PyQt5.QtCore </span><span class="s0">import </span><span class="s1">QLineF</span><span class="s0">, </span><span class="s1">QPointF</span><span class="s0">, </span><span class="s1">QObject</span>
+<span class="s0">elif </span><span class="s1">PYQT_VER == </span><span class="s2">'PYQT4'</span><span class="s1">:</span>
+    <span class="s0">from </span><span class="s1">PyQt4.QtCore </span><span class="s0">import </span><span class="s1">QLineF</span><span class="s0">, </span><span class="s1">QPointF</span><span class="s0">, </span><span class="s1">QObject</span>
+<span class="s0">elif </span><span class="s1">PYQT_VER == </span><span class="s2">'PYQT6'</span><span class="s1">:</span>
+    <span class="s0">from </span><span class="s1">PyQt6.QtCore </span><span class="s0">import </span><span class="s1">QLineF</span><span class="s0">, </span><span class="s1">QPointF</span><span class="s0">, </span><span class="s1">QObject</span>
+<span class="s0">else</span><span class="s1">:</span>
+    <span class="s0">raise </span><span class="s1">Exception(</span><span class="s2">'Unsupported Version of PyQt: {}'</span><span class="s1">.format(PYQT_VER))</span>
+
+<span class="s0">import </span><span class="s1">time</span>
+<span class="s0">import </span><span class="s1">math</span>
+
+<span class="s3"># Some global color constants that might be useful</span>
+<span class="s1">RED = (</span><span class="s4">255</span><span class="s0">, </span><span class="s4">0</span><span class="s0">, </span><span class="s4">0</span><span class="s1">)</span>
+<span class="s1">GREEN = (</span><span class="s4">0</span><span class="s0">, </span><span class="s4">255</span><span class="s0">, </span><span class="s4">0</span><span class="s1">)</span>
+<span class="s1">BLUE = (</span><span class="s4">0</span><span class="s0">, </span><span class="s4">0</span><span class="s0">, </span><span class="s4">255</span><span class="s1">)</span>
+
+<span class="s3"># Global variable that controls the speed of the recursion automation, in seconds</span>
+<span class="s3">#</span>
+<span class="s1">PAUSE = </span><span class="s4">0.1</span>
+
+
+<span class="s3">#</span>
+<span class="s3"># This is the class you have to complete.</span>
+<span class="s3">#</span>
+<span class="s0">class </span><span class="s1">ConvexHullSolver(QObject):</span>
+
+    <span class="s3"># Class constructor</span>
+    <span class="s0">def </span><span class="s1">__init__(self):</span>
+        <span class="s1">super().__init__()</span>
+        <span class="s1">self.pause = </span><span class="s0">False</span>
+
+    <span class="s3"># Some helper methods that make calls to the GUI, allowing us to send updates</span>
+    <span class="s3"># to be displayed.</span>
+
+    <span class="s0">def </span><span class="s1">showTangent(self</span><span class="s0">, </span><span class="s1">line</span><span class="s0">, </span><span class="s1">color):</span>
+        <span class="s1">lines = [line]</span>
+        <span class="s1">self.view.addLines(lines</span><span class="s0">, </span><span class="s1">color)</span>
+        <span class="s0">if </span><span class="s1">self.pause:</span>
+            <span class="s1">time.sleep(PAUSE)</span>
+
+    <span class="s0">def </span><span class="s1">eraseTangent(self</span><span class="s0">, </span><span class="s1">line):</span>
+        <span class="s1">self.view.clearLines([line])</span>
+
+    <span class="s0">def </span><span class="s1">blinkTangent(self</span><span class="s0">, </span><span class="s1">line</span><span class="s0">, </span><span class="s1">color):</span>
+        <span class="s1">self.showTangent(line</span><span class="s0">, </span><span class="s1">color)</span>
+        <span class="s1">self.eraseTangent(line)</span>
+
+    <span class="s0">def </span><span class="s1">showHull(self</span><span class="s0">, </span><span class="s1">polygon</span><span class="s0">, </span><span class="s1">color):</span>
+        <span class="s1">self.view.addLines(polygon</span><span class="s0">, </span><span class="s1">color)</span>
+        <span class="s0">if </span><span class="s1">self.pause:</span>
+            <span class="s1">time.sleep(PAUSE)</span>
+
+    <span class="s0">def </span><span class="s1">eraseHull(self</span><span class="s0">, </span><span class="s1">polygon):</span>
+        <span class="s1">self.view.clearLines(polygon)</span>
+
+    <span class="s0">def </span><span class="s1">showText(self</span><span class="s0">, </span><span class="s1">text):</span>
+        <span class="s1">self.view.displayStatusText(text)</span>
+
+    <span class="s3"># This is the method that gets called by the GUI and actually executes</span>
+    <span class="s3"># the finding of the hull</span>
+    <span class="s0">def </span><span class="s1">compute_hull(self</span><span class="s0">, </span><span class="s1">points</span><span class="s0">, </span><span class="s1">pause</span><span class="s0">, </span><span class="s1">view):</span>
+        <span class="s1">self.pause = pause</span>
+        <span class="s1">self.view = view</span>
+        <span class="s0">assert </span><span class="s1">(type(points) == list </span><span class="s0">and </span><span class="s1">type(points[</span><span class="s4">0</span><span class="s1">]) == QPointF)</span>
+
+        <span class="s1">t1 = time.time()</span>
+        <span class="s1">points.sort(key=</span><span class="s0">lambda </span><span class="s1">p: p.x())  </span><span class="s3"># sort function for list in python is O(n log n)</span>
+        <span class="s1">t2 = time.time()</span>
+
+        <span class="s1">t3 = time.time()</span>
+
+        <span class="s1">hull_points = self.create_hull(points)</span>
+        <span class="s1">t4 = time.time()</span>
+
+        <span class="s3"># when passing lines to the display, pass a list of QLineF objects.  Each QLineF</span>
+        <span class="s3"># object can be created with two QPointF objects corresponding to the endpoints</span>
+        <span class="s1">polygon = [QLineF(hull_points[i]</span><span class="s0">, </span><span class="s1">hull_points[(i + </span><span class="s4">1</span><span class="s1">) % len(hull_points)]) </span><span class="s0">for </span><span class="s1">i </span><span class="s0">in </span><span class="s1">range(len(hull_points))]</span>
+        <span class="s1">self.showHull(polygon</span><span class="s0">, </span><span class="s1">RED)</span>
+        <span class="s1">self.showText(</span><span class="s2">'Time Elapsed (Convex Hull): {:3.3f} sec'</span><span class="s1">.format(t4 - t1))</span>
+
+    <span class="s3"># Time complexity: Divide and conquer, so use master theorem. Dividing into two subproblems (a = 2),</span>
+    <span class="s3">#   each has half the size (b = 2), merging them back together in linear time (d = 1). 2 / (2^1) = 1, giving us</span>
+    <span class="s3">#   O(n log n) time</span>
+    <span class="s3"># Space complexity: O(n). The recursion tree is iterating down one branch of the tree and you aren’t creating any</span>
+    <span class="s3">#   new lists at each node. The max you could ever have at once is n memory used.</span>
+    <span class="s0">def </span><span class="s1">create_hull(self</span><span class="s0">, </span><span class="s1">points):</span>
+        <span class="s3"># recurse down, splitting the points in half, till you have 2 or 3 point elements</span>
+        <span class="s0">if </span><span class="s1">len(points) &gt; </span><span class="s4">3</span><span class="s1">:</span>
+            <span class="s1">middle = math.floor(len(points) / </span><span class="s4">2</span><span class="s1">)</span>
+            <span class="s1">l_hull = self.create_hull(points[:middle])</span>
+            <span class="s1">r_hull = self.create_hull(points[middle:])</span>
+        <span class="s0">elif </span><span class="s1">len(points) == </span><span class="s4">3</span><span class="s1">:</span>
+            <span class="s3"># if it's 3 points, sort them in clockwise order</span>
+            <span class="s0">return </span><span class="s1">self.sort_base_case_clockwise(points)</span>
+        <span class="s0">else</span><span class="s1">:</span>
+            <span class="s3"># else it is 2 points, and there is no need to sort because we already sorted L to R</span>
+            <span class="s0">return </span><span class="s1">points</span>
+
+        <span class="s3"># polygon_l = [QLineF(l_hull[i], l_hull[(i + 1) % len(l_hull)]) for i in range(len(l_hull))]</span>
+        <span class="s3"># self.showHull(polygon_l, RED)</span>
+        <span class="s3"># polygon_r = [QLineF(r_hull[i], r_hull[(i + 1) % len(r_hull)]) for i in range(len(r_hull))]</span>
+        <span class="s3"># self.showHull(polygon_r, RED)</span>
+
+        <span class="s3"># find the R most index in l_hull and the L most index in r_hull (which is just the first one)</span>
+        <span class="s1">current_index_l = self.find_right_most_index(l_hull)</span>
+        <span class="s1">current_index_r = </span><span class="s4">0</span>
+
+        <span class="s3"># call the helper functions to find the upper bounds and lower bounds, then save them as their point indexes</span>
+        <span class="s1">up_left_index</span><span class="s0">, </span><span class="s1">up_right_index = self.find_upper_bound(l_hull</span><span class="s0">, </span><span class="s1">r_hull</span><span class="s0">, </span><span class="s1">current_index_l</span><span class="s0">, </span><span class="s1">current_index_r)</span>
+        <span class="s1">down_left_index</span><span class="s0">, </span><span class="s1">down_right_index = self.find_lower_bound(l_hull</span><span class="s0">, </span><span class="s1">r_hull</span><span class="s0">, </span><span class="s1">current_index_l</span><span class="s0">, </span><span class="s1">current_index_r)</span>
+
+        <span class="s3"># create the hull that will be returned. this is done by circling clockwise around the edges of the hull,</span>
+        <span class="s3"># dropping the points that are in the middle using the indexes</span>
+        <span class="s3"># 0 --&gt; up_left_index --&gt; up_right_index --&gt; down_right_index --&gt; down_left_index --&gt; back to 0</span>
+        <span class="s1">hull_points = []</span>
+        <span class="s1">hull_points.extend(l_hull[:up_left_index + </span><span class="s4">1</span><span class="s1">])</span>
+        <span class="s0">if </span><span class="s1">down_right_index != </span><span class="s4">0</span><span class="s1">:</span>
+            <span class="s1">hull_points.extend(r_hull[up_right_index:down_right_index + </span><span class="s4">1</span><span class="s1">])</span>
+        <span class="s0">else</span><span class="s1">:</span>
+            <span class="s1">hull_points.extend(r_hull[up_right_index:])</span>
+            <span class="s1">hull_points.append(r_hull[</span><span class="s4">0</span><span class="s1">])</span>
+        <span class="s0">if </span><span class="s1">down_left_index != </span><span class="s4">0</span><span class="s1">:</span>
+            <span class="s1">hull_points.extend(l_hull[down_left_index:])</span>
+
+        <span class="s3"># self.eraseHull(polygon_l)</span>
+        <span class="s3"># self.eraseHull(polygon_r)</span>
+        <span class="s3"># polygon = [QLineF(hull_points[i], hull_points[(i + 1) % len(hull_points)]) for i in range(len(hull_points))]</span>
+        <span class="s3"># self.showHull(polygon, GREEN)</span>
+
+        <span class="s0">return </span><span class="s1">hull_points</span>
+
+    <span class="s1">@staticmethod</span>
+    <span class="s0">def </span><span class="s1">slope(x1</span><span class="s0">, </span><span class="s1">y1</span><span class="s0">, </span><span class="s1">x2</span><span class="s0">, </span><span class="s1">y2):</span>
+        <span class="s3"># returns the slope given the x / y values of two points</span>
+        <span class="s0">return </span><span class="s1">(y2 - y1) / (x2 - x1)</span>
+
+    <span class="s0">def </span><span class="s1">sort_base_case_clockwise(self</span><span class="s0">, </span><span class="s1">points):</span>
+        <span class="s3"># 3 points need to be sorted in clockwise order</span>
+        <span class="s1">sorted_points = [points[</span><span class="s4">0</span><span class="s1">]]</span>
+        <span class="s1">slope_1 = self.slope(QPointF.x(points[</span><span class="s4">0</span><span class="s1">])</span><span class="s0">,</span>
+                             <span class="s1">QPointF.y(points[</span><span class="s4">0</span><span class="s1">])</span><span class="s0">,</span>
+                             <span class="s1">QPointF.x(points[</span><span class="s4">1</span><span class="s1">])</span><span class="s0">,</span>
+                             <span class="s1">QPointF.y(points[</span><span class="s4">1</span><span class="s1">]))</span>
+        <span class="s1">slope_2 = self.slope(QPointF.x(points[</span><span class="s4">0</span><span class="s1">])</span><span class="s0">,</span>
+                             <span class="s1">QPointF.y(points[</span><span class="s4">0</span><span class="s1">])</span><span class="s0">,</span>
+                             <span class="s1">QPointF.x(points[</span><span class="s4">2</span><span class="s1">])</span><span class="s0">,</span>
+                             <span class="s1">QPointF.y(points[</span><span class="s4">2</span><span class="s1">]))</span>
+        <span class="s3"># compare the slopes between the first and second/first and third</span>
+        <span class="s0">if </span><span class="s1">slope_1 &gt; slope_2:</span>
+            <span class="s1">sorted_points.extend([points[</span><span class="s4">1</span><span class="s1">]</span><span class="s0">, </span><span class="s1">points[</span><span class="s4">2</span><span class="s1">]])</span>
+        <span class="s0">else</span><span class="s1">:</span>
+            <span class="s1">sorted_points.extend([points[</span><span class="s4">2</span><span class="s1">]</span><span class="s0">, </span><span class="s1">points[</span><span class="s4">1</span><span class="s1">]])</span>
+
+        <span class="s0">return </span><span class="s1">sorted_points</span>
+
+    <span class="s3"># Time complexity: worst case scenario would be iterating through the whole hull, so O(n)</span>
+    <span class="s3"># Space complexity: only storing the list of points, so O(n)</span>
+    <span class="s1">@staticmethod</span>
+    <span class="s0">def </span><span class="s1">find_right_most_index(l_hull):</span>
+        <span class="s1">right_most_index = </span><span class="s4">0</span>
+        <span class="s3"># iterate through the points in the l_hull--if the pt's x is bigger, keep going. else return the index.</span>
+        <span class="s0">for </span><span class="s1">index</span><span class="s0">, </span><span class="s1">pt </span><span class="s0">in </span><span class="s1">enumerate(l_hull):</span>
+            <span class="s0">if </span><span class="s1">index == </span><span class="s4">0</span><span class="s1">:</span>
+                <span class="s0">continue</span>
+
+            <span class="s0">if </span><span class="s1">QPointF.x(pt) &gt; QPointF.x(l_hull[right_most_index]):</span>
+                <span class="s1">right_most_index = index</span>
+            <span class="s0">else</span><span class="s1">:</span>
+                <span class="s0">return </span><span class="s1">right_most_index</span>
+
+        <span class="s0">return </span><span class="s1">right_most_index</span>
+
+    <span class="s3"># Time complexity: the nested while loops are the part that will take the longest; however, the inner while loops</span>
+    <span class="s3">#   will maximally terminate after looping through all the points (the slope must fail the check if it loops back</span>
+    <span class="s3">#   to the start of the hull). So the inner loops are both O(n), and the outer loop terminates if neither inner</span>
+    <span class="s3">#   loop changes, meaning that this is O(n + n) --&gt; O(n).</span>
+    <span class="s3"># Space complexity: the only thing stored is both lists of hulls, so O(n + n) --&gt; O(n).</span>
+    <span class="s0">def </span><span class="s1">find_upper_bound(self</span><span class="s0">, </span><span class="s1">l_hull</span><span class="s0">, </span><span class="s1">r_hull</span><span class="s0">, </span><span class="s1">current_index_l</span><span class="s0">, </span><span class="s1">current_index_r):</span>
+        <span class="s1">upper_bound_slope = self.slope(QPointF.x(l_hull[current_index_l])</span><span class="s0">,</span>
+                                       <span class="s1">QPointF.y(l_hull[current_index_l])</span><span class="s0">,</span>
+                                       <span class="s1">QPointF.x(r_hull[current_index_r])</span><span class="s0">,</span>
+                                       <span class="s1">QPointF.y(r_hull[current_index_r]))</span>
+
+        <span class="s3"># line = QLineF(l_hull[current_index_l], r_hull[current_index_r])</span>
+        <span class="s3"># self.blinkTangent(line, BLUE)</span>
+
+        <span class="s3"># nested while loop--outer loop continues if there has been a change in the upper_bound_slope, inner loops move</span>
+        <span class="s3"># the indexes of the l_hull and r_hull around to find the best slope, respectively.</span>
+        <span class="s1">change = </span><span class="s0">True</span>
+        <span class="s0">while </span><span class="s1">change:</span>
+            <span class="s1">change = </span><span class="s0">False</span>
+
+            <span class="s0">while True</span><span class="s1">:</span>
+                <span class="s1">check_index_l = (current_index_l - </span><span class="s4">1</span><span class="s1">) % len(l_hull)</span>
+                <span class="s1">check_slope = self.slope(QPointF.x(l_hull[check_index_l])</span><span class="s0">,</span>
+                                         <span class="s1">QPointF.y(l_hull[check_index_l])</span><span class="s0">,</span>
+                                         <span class="s1">QPointF.x(r_hull[current_index_r])</span><span class="s0">,</span>
+                                         <span class="s1">QPointF.y(r_hull[current_index_r]))</span>
+                <span class="s3"># line = QLineF(l_hull[check_index_l], r_hull[current_index_r])</span>
+                <span class="s3"># self.blinkTangent(line, BLUE)</span>
+
+                <span class="s0">if </span><span class="s1">check_slope &gt; upper_bound_slope:</span>
+                    <span class="s3"># end the loop--we've found the best slope for the current_index_r</span>
+                    <span class="s0">break</span>
+                <span class="s0">else</span><span class="s1">:</span>
+                    <span class="s3"># keep going--save the check variables into the current variables and try again</span>
+                    <span class="s1">change = </span><span class="s0">True</span>
+                    <span class="s1">upper_bound_slope = check_slope</span>
+                    <span class="s1">current_index_l = check_index_l</span>
+
+            <span class="s0">while True</span><span class="s1">:</span>
+                <span class="s1">check_index_r = (current_index_r + </span><span class="s4">1</span><span class="s1">) % len(r_hull)</span>
+                <span class="s1">check_slope = self.slope(QPointF.x(l_hull[current_index_l])</span><span class="s0">,</span>
+                                         <span class="s1">QPointF.y(l_hull[current_index_l])</span><span class="s0">,</span>
+                                         <span class="s1">QPointF.x(r_hull[check_index_r])</span><span class="s0">,</span>
+                                         <span class="s1">QPointF.y(r_hull[check_index_r]))</span>
+
+                <span class="s3"># line = QLineF(l_hull[current_index_l], r_hull[check_index_r])</span>
+                <span class="s3"># self.blinkTangent(line, BLUE)</span>
+
+                <span class="s0">if </span><span class="s1">check_slope &lt; upper_bound_slope:</span>
+                    <span class="s3"># end the loop--we've found the best slope for the current_index_l</span>
+                    <span class="s0">break</span>
+                <span class="s0">else</span><span class="s1">:</span>
+                    <span class="s3"># keep going--save the check variables into the current variables and try again</span>
+                    <span class="s1">change = </span><span class="s0">True</span>
+                    <span class="s1">upper_bound_slope = check_slope</span>
+                    <span class="s1">current_index_r = check_index_r</span>
+
+        <span class="s3"># line = QLineF(l_hull[current_index_l], r_hull[current_index_r])</span>
+        <span class="s3"># self.blinkTangent(line, GREEN)</span>
+        <span class="s3"># self.blinkTangent(line, GREEN)</span>
+        <span class="s0">return </span><span class="s1">current_index_l</span><span class="s0">, </span><span class="s1">current_index_r</span>
+
+    <span class="s3"># Time complexity: the nested while loops are the part that will take the longest; however, the inner while loops</span>
+    <span class="s3">#   will maximally terminate after looping through all the points (the slope must fail the check if it loops back</span>
+    <span class="s3">#   to the start of the hull). So the inner loops are both O(n), and the outer loop terminates if neither inner</span>
+    <span class="s3">#   loop changes, meaning that this is O(n + n) --&gt; O(n).</span>
+    <span class="s3"># Space complexity: the only thing stored is both lists of hulls, so O(n + n) --&gt; O(n).</span>
+    <span class="s0">def </span><span class="s1">find_lower_bound(self</span><span class="s0">, </span><span class="s1">l_hull</span><span class="s0">, </span><span class="s1">r_hull</span><span class="s0">, </span><span class="s1">current_index_l</span><span class="s0">, </span><span class="s1">current_index_r):</span>
+        <span class="s1">lower_bound_slope = self.slope(QPointF.x(l_hull[current_index_l])</span><span class="s0">,</span>
+                                       <span class="s1">QPointF.y(l_hull[current_index_l])</span><span class="s0">,</span>
+                                       <span class="s1">QPointF.x(r_hull[current_index_r])</span><span class="s0">,</span>
+                                       <span class="s1">QPointF.y(r_hull[current_index_r]))</span>
+
+        <span class="s3"># line = QLineF(l_hull[current_index_l], r_hull[current_index_r])</span>
+        <span class="s3"># self.blinkTangent(line, BLUE)</span>
+
+        <span class="s3"># double while loop--outer loop continues if there has been a change in the upper_bound_slope, inner loops move</span>
+        <span class="s3"># the indexes of the l_hull and r_hull around to find the best slope, respectively.</span>
+        <span class="s1">change = </span><span class="s0">True</span>
+        <span class="s0">while </span><span class="s1">change:</span>
+            <span class="s1">change = </span><span class="s0">False</span>
+
+            <span class="s0">while True</span><span class="s1">:</span>
+                <span class="s1">check_index_l = (current_index_l + </span><span class="s4">1</span><span class="s1">) % len(l_hull)</span>
+                <span class="s1">check_slope = self.slope(QPointF.x(l_hull[check_index_l])</span><span class="s0">,</span>
+                                         <span class="s1">QPointF.y(l_hull[check_index_l])</span><span class="s0">,</span>
+                                         <span class="s1">QPointF.x(r_hull[current_index_r])</span><span class="s0">,</span>
+                                         <span class="s1">QPointF.y(r_hull[current_index_r]))</span>
+
+                <span class="s3"># line = QLineF(l_hull[check_index_l], r_hull[current_index_r])</span>
+                <span class="s3"># self.blinkTangent(line, BLUE)</span>
+
+                <span class="s0">if </span><span class="s1">check_slope &lt; lower_bound_slope:</span>
+                    <span class="s3"># end the loop--we've found the best slope for the current_index_r</span>
+                    <span class="s0">break</span>
+                <span class="s0">else</span><span class="s1">:</span>
+                    <span class="s3"># keep going--save the check variables into the current variables and try again</span>
+                    <span class="s1">change = </span><span class="s0">True</span>
+                    <span class="s1">lower_bound_slope = check_slope</span>
+                    <span class="s1">current_index_l = check_index_l</span>
+
+            <span class="s0">while True</span><span class="s1">:</span>
+                <span class="s1">check_index_r = (current_index_r - </span><span class="s4">1</span><span class="s1">) % len(r_hull)</span>
+                <span class="s1">check_slope = self.slope(QPointF.x(l_hull[current_index_l])</span><span class="s0">,</span>
+                                         <span class="s1">QPointF.y(l_hull[current_index_l])</span><span class="s0">,</span>
+                                         <span class="s1">QPointF.x(r_hull[check_index_r])</span><span class="s0">,</span>
+                                         <span class="s1">QPointF.y(r_hull[check_index_r]))</span>
+
+                <span class="s3"># line = QLineF(l_hull[current_index_l], r_hull[check_index_r])</span>
+                <span class="s3"># self.blinkTangent(line, BLUE)</span>
+
+                <span class="s0">if </span><span class="s1">check_slope &gt; lower_bound_slope:</span>
+                    <span class="s3"># end the loop--we've found the best slope for the current_index_l</span>
+                    <span class="s0">break</span>
+                <span class="s0">else</span><span class="s1">:</span>
+                    <span class="s3"># keep going--save the check variables into the current variables and try again</span>
+                    <span class="s1">change = </span><span class="s0">True</span>
+                    <span class="s1">lower_bound_slope = check_slope</span>
+                    <span class="s1">current_index_r = check_index_r</span>
+
+        <span class="s3"># line = QLineF(l_hull[current_index_l], r_hull[current_index_r])</span>
+        <span class="s3"># self.blinkTangent(line, GREEN)</span>
+        <span class="s3"># self.blinkTangent(line, GREEN)</span>
+        <span class="s0">return </span><span class="s1">current_index_l</span><span class="s0">, </span><span class="s1">current_index_r</span>
+</pre>
+</body>
+</html>
